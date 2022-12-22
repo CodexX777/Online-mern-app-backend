@@ -1,6 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-//const cors=require('cors');
+
 const sellerProdRoutes = require("./routes/sellerProd-routes");
 const userRoute = require("./routes/user-routes");
 const productRoute = require("./routes/products-routes");
@@ -11,11 +11,7 @@ const app = express();
 
 //middlewares
 
-app.use(bodyParser.json()); //will parse any post request data into json
-// app.use(cors({
-//   origin:'*',
-//   methods:'GET,POST,DELETE,PATCH'
-// }));
+app.use(bodyParser.json()); 
 
 app.use("/uploads/images", express.static(path.join("uploads", "images")));
 
@@ -53,7 +49,7 @@ mongoose
     `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.xvgrljc.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`
   )
   .then(() => {
-    app.listen(5000);
+    app.listen(process.env.PORT||5000);
   })
   .catch((err) => {
     console.log(err);

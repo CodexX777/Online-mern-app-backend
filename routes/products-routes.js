@@ -3,7 +3,6 @@ const express = require("express");
 const router = express.Router();
 const userControllers = require("../controllers/user-controllers");
 const { check } = require("express-validator");
-//get user cart elements from the database using the uid in the url
 const checkAuth=require('../middleware/check-auth');
 
 
@@ -39,9 +38,5 @@ router.post(
   userControllers.addToCart
 );
 
-// route to patch the user address using the uid
-
-//route to fetch the user address
-// router.get("/address/:uid", userControllers.getUserAddress);
 
 module.exports = router;

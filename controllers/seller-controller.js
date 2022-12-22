@@ -52,7 +52,6 @@ const addProduct = async (req, res, next) => {
   let sess;
 
   try {
-    // await newProduct.save();
     sess = await mongoose.startSession();
 
     sess.startTransaction();
@@ -74,7 +73,6 @@ const addProduct = async (req, res, next) => {
 
 const getSellerProducts = async (req, res, next) => {
   const sellerId = req.params.uid;
-  //search this seller and fetch his products
   if(sellerId!==req.userData.userId ){
     return next(new HttpError("Cannot find the user, Invalid user id.", 404));
   }

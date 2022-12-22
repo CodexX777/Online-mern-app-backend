@@ -28,9 +28,7 @@ const getOrderItems = async (req, res, next) => {
     return next(new HttpError("Cannot find the user, Invalid user id.", 404));
   }
   res.status(200).json(user.orders);
-  //destructure the jwt token and get the userid from there and fetch the cart items of that user
-
-  // or rather just get the uid from the url
+ 
 };
 
 const getCartElements = async (req, res, next) => {
@@ -55,8 +53,7 @@ const getCartElements = async (req, res, next) => {
   }
 
   res.status(200).json(user.cart);
-  //destructure the jwt token and get the userid from there and fetch the cart items of that user
-};
+ };
 
 const updateAddress = async (req, res, next) => {
   const errors = validationResult(req);
@@ -250,7 +247,7 @@ const removeFromCart = async (req, res, next) => {
 
   try {
     user = await User.findById(uid);
-    //let prod = await Product.findById(pid);
+  
     if (!user) {
       return next(new HttpError("Invalid user or product id", 404));
     }
@@ -338,8 +335,7 @@ const buyNow = async (req, res, next) => {
 };
 
 const buyCartItems = async (req, res, next) => {
-  //we expect a json obejct with uid and an array of cartItem object id's
-
+ 
   const { uid, cartItems } = req.body;
 
   if (uid !== req.userData.userId) {
@@ -350,12 +346,12 @@ const buyCartItems = async (req, res, next) => {
   let sess;
   try {
     user = await User.findById(uid);
-    //
+    
     if (!user) {
       return next(new HttpError("Invalid user id", 404));
     }
 
-    // Create a map to count the quantity of each product
+  
     const prodCount = new Map();
     for (const id of cartItems) {
       if (!prodCount.has(id)) {
@@ -368,7 +364,7 @@ const buyCartItems = async (req, res, next) => {
     sess = await mongoose.startSession();
     sess.startTransaction();
 
-    // Check if any of the products are out of stock
+  
     for (const [id, quantity] of prodCount) {
       const prod = await Product.findById(id);
       if (prod.prodStock < quantity) {
@@ -469,4 +465,3 @@ exports.signup = signup;
 exports.login = login;
 exports.updateAddress = updateAddress;
 exports.getCartElements = getCartElements;
-// exports.getUserAddress = getUserAddress;
