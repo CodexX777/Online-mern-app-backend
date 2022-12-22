@@ -12,10 +12,9 @@ const getOrderItems = async (req, res, next) => {
 
   let user;
 
-  if(userId!==req.userData.userId ){
+  if (userId !== req.userData.userId) {
     return next(new HttpError("Cannot find the user, Invalid user id.", 404));
   }
-
 
   try {
     user = await User.findById(userId).populate("orders");
@@ -37,7 +36,7 @@ const getOrderItems = async (req, res, next) => {
 const getCartElements = async (req, res, next) => {
   const userId = req.params.uid;
 
-  if(userId!==req.userData.userId ){
+  if (userId !== req.userData.userId) {
     return next(new HttpError("Cannot find the user, Invalid user id.", 404));
   }
 
@@ -55,11 +54,9 @@ const getCartElements = async (req, res, next) => {
     return next(new HttpError("Cannot find the user, Invalid user id.", 404));
   }
 
-  
   res.status(200).json(user.cart);
   //destructure the jwt token and get the userid from there and fetch the cart items of that user
 };
-
 
 const updateAddress = async (req, res, next) => {
   const errors = validationResult(req);
@@ -70,14 +67,12 @@ const updateAddress = async (req, res, next) => {
       new HttpError("Invalid inputs passed, Please check your data.", 422)
     );
   }
- 
 
   const userId = req.params.uid;
 
-
   const { address } = req.body;
 
-  if(req.userData.userId!==userId){
+  if (req.userData.userId !== userId) {
     return next(
       new HttpError("You are not allowed to update the address.", 401)
     );
@@ -159,7 +154,7 @@ const signup = async (req, res, next) => {
   try {
     token = jwt.sign(
       { uid: newUser._id, email: newUser.email },
-      "shivang_CodexX_260279",
+      process.env.JWT_KEY,
       { expiresIn: "1h" }
     );
   } catch (error) {
@@ -168,9 +163,12 @@ const signup = async (req, res, next) => {
     );
   }
 
-  res
-    .status(201)
-    .json({ uid: newUser._id, email: newUser.email, token: token,address:newUser.address });
+  res.status(201).json({
+    uid: newUser._id,
+    email: newUser.email,
+    token: token,
+    address: newUser.address,
+  });
 };
 
 const login = async (req, res, next) => {
@@ -214,7 +212,7 @@ const login = async (req, res, next) => {
   try {
     token = jwt.sign(
       { uid: user._id, email: user.email },
-      "shivang_CodexX_260279",
+      process.env.JWT_KEY,
       { expiresIn: "1h" }
     );
   } catch (error) {
@@ -223,7 +221,12 @@ const login = async (req, res, next) => {
     );
   }
 
-  res.status(200).json({ uid: user._id, email: user.email, token: token,address:user.address });
+  res.status(200).json({
+    uid: user._id,
+    email: user.email,
+    token: token,
+    address: user.address,
+  });
 };
 
 const removeFromCart = async (req, res, next) => {
@@ -241,7 +244,7 @@ const removeFromCart = async (req, res, next) => {
 
   const { uid, deleteItems } = req.body;
 
-  if(uid!==req.userData.userId ){
+  if (uid !== req.userData.userId) {
     return next(new HttpError("Cannot find the user, Invalid user id.", 404));
   }
 
@@ -299,10 +302,9 @@ const buyNow = async (req, res, next) => {
   }
   const { pid, uid } = req.body;
 
-  if(uid!==req.userData.userId ){
+  if (uid !== req.userData.userId) {
     return next(new HttpError("Cannot find the user, Invalid user id.", 404));
   }
-
 
   let user;
   let sess;
@@ -314,9 +316,15 @@ const buyNow = async (req, res, next) => {
       return next(new HttpError("Invalid user or product id", 404));
     }
 
+    if (prod.prodStock == 0) {
+      return next(new HttpError("Product is out of stock.", 404));
+    }
+
     sess = await mongoose.startSession();
     sess.startTransaction();
     user.orders.push(pid);
+    prod.prodStock = prod.prodStock - 1;
+    await prod.save({ session: sess });
     await user.save({ session: sess });
     sess.commitTransaction();
   } catch (error) {
@@ -332,13 +340,11 @@ const buyNow = async (req, res, next) => {
 const buyCartItems = async (req, res, next) => {
   //we expect a json obejct with uid and an array of cartItem object id's
 
-
   const { uid, cartItems } = req.body;
 
-  if(uid!==req.userData.userId ){
+  if (uid !== req.userData.userId) {
     return next(new HttpError("Cannot find the user, Invalid user id.", 404));
   }
-
 
   let user;
   let sess;
@@ -349,18 +355,43 @@ const buyCartItems = async (req, res, next) => {
       return next(new HttpError("Invalid user id", 404));
     }
 
+    // Create a map to count the quantity of each product
+    const prodCount = new Map();
+    for (const id of cartItems) {
+      if (!prodCount.has(id)) {
+        prodCount.set(id, 1);
+      } else {
+        prodCount.set(id, prodCount.get(id) + 1);
+      }
+    }
+
     sess = await mongoose.startSession();
     sess.startTransaction();
+
+    // Check if any of the products are out of stock
+    for (const [id, quantity] of prodCount) {
+      const prod = await Product.findById(id);
+      if (prod.prodStock < quantity) {
+        sess.abortTransaction();
+        return next(
+          new HttpError(
+            "Some products do not have sufficient stock, please check your cart",
+            404
+          )
+        );
+      }
+    }
 
     for (let i = 0; i < cartItems.length; i++) {
       let prod = await Product.findById(cartItems[i]);
       if (prod) {
         user.orders.push(prod._id);
         user.cart.pull(prod._id);
+        prod.prodStock = prod.prodStock - 1;
         await user.save({ session: sess });
+        await prod.save({ session: sess });
       }
     }
-
     sess.commitTransaction();
   } catch (error) {
     sess.abortTransaction();
@@ -384,11 +415,9 @@ const addToCart = async (req, res, next) => {
   }
 
   const { pid, uid } = req.body;
-  if(uid!==req.userData.userId ){
+  if (uid !== req.userData.userId) {
     return next(new HttpError("Cannot find the user, Invalid user id.", 404));
   }
-
-
 
   let user;
   let sess;

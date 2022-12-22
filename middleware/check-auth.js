@@ -15,7 +15,7 @@ module.exports=(req,res,next)=>{
                 new HttpError("Authentication failed.", 401)
               );
         }
-        const decodedToken=jwt.verify(token,"shivang_CodexX_260279");
+        const decodedToken=jwt.verify(token,process.env.JWT_KEY);
         req.userData = {userId:decodedToken.uid}
 
         next();

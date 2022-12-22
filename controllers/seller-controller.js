@@ -235,7 +235,7 @@ const signup = async (req, res, next) => {
   try {
     token = jwt.sign(
       { uid: newSeller._id, email: newSeller.email },
-      "shivang_CodexX_260279",
+      process.env.JWT_KEY,
       { expiresIn: "1h" }
     );
   } catch (error) {
@@ -286,7 +286,7 @@ const login = async (req, res, next) => {
   try {
     token = jwt.sign(
       { uid: existingSeller._id, email: existingSeller.email },
-      "shivang_CodexX_260279",
+      process.env.JWT_KEY,
       { expiresIn: "1h" }
     );
   } catch (error) {
