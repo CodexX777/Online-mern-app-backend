@@ -4,8 +4,31 @@ const { validationResult } = require("express-validator");
 const Seller = require("../models/seller");
 const { default: mongoose } = require("mongoose");
 const jwt = require("jsonwebtoken");
-
+const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcryptjs");
+
+const { PutObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const { GetObjectCommand } = require("@aws-sdk/client-s3");
+const AWS = require('aws-sdk');
+const s3 =new AWS.S3();
+
+
+const MIME_TYPE = {
+  "image/png": "png",
+  "image/jpg": "jpg",
+  "image/jpeg": "jpeg",
+};
+
+// const s3 = new S3Client({
+//   credentials: {
+//     accessKeyId: "ASIARWVBFRVEQ2QNLCKE",
+//     secretAccessKey: "4doSEDPnmOzLBgN8Qs9Sy/yQtf4yFZxoMCa+HQIE",
+//     sessionToken:
+//       "IQoJb3JpZ2luX2VjEEcaCmFwLXNvdXRoLTEiSDBGAiEAw0aU66O+R5GDYu+mZ14CS6NfFwlXsgu1ewQY8om4gR4CIQCEqulIo7i290zj6StBnEyTWXw0gAzy9VPuudzg7eXbjyqzAgiQ//////////8BEAAaDDExNzM3NTg2NDEzNyIMoQTzXg2gQLJPrWytKocCULM+pl894KTCC1ybiH1YuZzy+qpOK8p12kpzXvR3TS6zPX5MOP3t7ZhOFs4KtBF36estiQYal7Kf6jD1YRvpWmQuwpysMoqrAGdFtlaM7C89g5V8OoXneNnh/jk73vHwz0DWGY3ZFW1iYn748+DQHKQ66utjvBEkNaRfd3+eNaYSSZxvDI8AxzsKB2iROHPrzI+oTeFY/qh5YWppy2t8In86GdUDZFjjECZ5fwVsNDAbUXFq0cRFTBmHuGnBOCbZC/virrejT6NZtEtmvTQlrwA/8jBGqCiTThpGodxLHdbQy55XYEvWDs1UifViTZDtmWUZWdLhdMkGoMRJXpHSCjZ2ozM4bi8wjKLBnQY6nAFU8rA9LIDF9TYpMzaO/WqpdQhO4TMuGTHmWsuYyfUk39I+fHj28taUBpXriUMKGkmKGGUjhQ7fLI4t6Uzfm0szLoIaTJqALvqRYBGGwct78hvgEVql85YIbITcsqFfmGqNezMRHOuYvqb4IyMTotwiYt8tNpoaGSonk4RIOnjJCAmJHWDqIc+jX2q3x3F3iOVKKOkCT96uLXgrRMI=",
+//   },
+//   region: "ap-southeast-1",
+// });
 
 const addProduct = async (req, res, next) => {
   const errors = validationResult(req);
@@ -15,19 +38,20 @@ const addProduct = async (req, res, next) => {
       new HttpError("Invalid inputs passed, Please check your data.", 422)
     );
   }
+  const filename = uuidv4();
 
   const { prodName, prodPrice, prodDesc, prodStock, uid } = req.body;
 
-  if(uid!==req.userData.userId ){
+  if (uid !== req.userData.userId) {
     return next(new HttpError("Cannot find the user, Invalid user id.", 404));
   }
-
+//  console.log(filename);
 
   const newProduct = new Product({
     prodName,
     prodDesc,
     prodStock,
-    prodImage: req.file.path,
+    prodImage: filename,
     prodPrice,
     uid,
     ratingSum: 0,
@@ -46,6 +70,37 @@ const addProduct = async (req, res, next) => {
   if (!seller) {
     return next(
       new HttpError("Invalid seller Id, Could not find the seller.", 404)
+    );
+  }
+
+  try {
+    // const params = {
+    //   Bucket: "cyclic-nutty-dress-bass-ap-southeast-1",
+    //   Key: filename,
+    //   Body: req.file.buffer,
+    //   ContentType: req.file.mimetype,
+    // };
+
+    // const command = new PutObjectCommand(params);
+
+
+    // await s3.send(command);
+    await s3.putObject({
+      Body:req.file.buffer,
+      Bucket:process.env.BUCKET,
+      Key: filename,
+      ContentType: req.file.mimetype
+    }).promise();
+
+
+   // console.log("success");
+  } catch (error) {
+   // console.log(error);
+    return next(
+      new HttpError(
+        "Something went wrong in Aws , please try again later.",
+        500
+      )
     );
   }
 
@@ -73,24 +128,22 @@ const addProduct = async (req, res, next) => {
 
 const getSellerProducts = async (req, res, next) => {
   const sellerId = req.params.uid;
-  if(sellerId!==req.userData.userId ){
-    return next(new HttpError("Cannot find the user, Invalid user id.", 404));
-  }
-
-
+  // if (sellerId !== req.userData.userId) {
+  //   return next(new HttpError("Cannot find the user, Invalid user id.", 404));
+  // }
 
   let prods;
 
-  prods = await Product.find({ uid: sellerId })
-    .clone()
-    .catch((err) => {
-      return next(
-        new HttpError(
-          "Something went wrong, Could not fetch the seller products.",
-          500
-        )
-      );
-    });
+  prods = await Product.find({ uid: sellerId }).exec();
+  // .clone()
+  // .catch((err) => {
+  //   return next(
+  //     new HttpError(
+  //       "Something went wrong, Could not fetch the seller products.",
+  //       500
+  //     )
+  //   );
+  // });
 
   if (!prods || prods.length === 0) {
     return next(
@@ -98,6 +151,52 @@ const getSellerProducts = async (req, res, next) => {
     );
   }
 
+  //to fetch presigned urls for images\
+
+  try {
+    // for (const prod of prods) {
+    //   console.log(prod.prodImage);
+    //   const getObjectParams = {
+    //     Bucket: "cyclic-nutty-dress-bass-ap-southeast-1",
+    //     Key: prod.prodImage,
+    //   };
+    //   const command = new GetObjectCommand(getObjectParams);
+    //   const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
+
+    //   prod.imageUrl = url;
+    //   console.log(prod+" "+prod.imageUrl);
+    // }
+    for (let i = 0; i < prods.length; i++) {
+      // const getObjectParams = {
+      //   Bucket: "cyclic-nutty-dress-bass-ap-southeast-1",
+      //   Key: prods[i].prodImage,
+      // };
+      // const command = new GetObjectCommand(getObjectParams);
+      // const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
+
+      // prods[i] = {
+      //   ...prods[i]._doc, // _doc is the key for the document that is fetched from the mongo server
+      //   imageUrl: url, 
+      // };
+      const params = {
+        Bucket: process.env.BUCKET,
+        Key: prods[i].prodImage,
+        Expires: 3600,
+      };
+
+      const url = await s3.getSignedUrl("getObject", params);
+
+      prods[i] = {
+        ...prods[i]._doc, // _doc is the key for the document that is fetched from the mongo server
+        imageUrl: url,
+      };
+
+
+    }
+  } catch (error) {
+   // console.log(error);
+    return next(new HttpError("Could not fetch images from s3 bucket.", 500));
+  }
   res.json(prods);
 };
 
@@ -152,12 +251,10 @@ const updateProduct = async (req, res, next) => {
   }
 
   const { uid, pid, prodPrice, prodStock } = req.body;
-  
-  if(uid!==req.userData.userId ){
+
+  if (uid !== req.userData.userId) {
     return next(new HttpError("Cannot find the user, Invalid user id.", 404));
   }
-
-
 
   const filter = { _id: pid, uid: uid };
   const updatedProduct = {
@@ -293,7 +390,11 @@ const login = async (req, res, next) => {
     );
   }
 
-  res.json({uid:existingSeller._id,email:existingSeller.email,token:token});
+  res.json({
+    uid: existingSeller._id,
+    email: existingSeller.email,
+    token: token,
+  });
 };
 
 exports.login = login;
