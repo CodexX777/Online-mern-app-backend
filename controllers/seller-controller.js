@@ -83,7 +83,7 @@ const addProduct = async (req, res, next) => {
     // await s3.send(command);
     await s3.putObject({
       Body:req.file.buffer,
-      Bucket:process.env.BUCKET,
+      Bucket:process.env.CYCLIC_BUCKET_NAME,
       Key: filename,
       ContentType: req.file.mimetype
     }).promise();
@@ -175,7 +175,7 @@ const getSellerProducts = async (req, res, next) => {
       //   imageUrl: url, 
       // };
       const params = {
-        Bucket: process.env.BUCKET,
+        Bucket: process.env.CYCLIC_BUCKET_NAME,
         Key: prods[i].prodImage,
         Expires: 3600,
       };

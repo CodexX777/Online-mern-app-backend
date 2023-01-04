@@ -56,7 +56,7 @@ const getOrderItems = async (req, res, next) => {
       // const command = new GetObjectCommand(getObjectParams);
 
       const params = {
-        Bucket: process.env.BUCKET,
+        Bucket: process.env.CYCLIC_BUCKET_NAME,
         Key: userData.orders[i].prodImage,
         Expires: 3600,
       };
@@ -114,7 +114,7 @@ const getCartElements = async (req, res, next) => {
       // const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
 
       const params = {
-        Bucket:process.env.BUCKET,
+        Bucket:process.env.CYCLIC_BUCKET_NAME,
         Key: userData.cart[i].prodImage,
         Expires: 3600,
       };
@@ -376,7 +376,7 @@ const searchQuery = async (req, res, next) => {
       // const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
 
       const params = {
-        Bucket: process.env.BUCKET,
+        Bucket: process.env.CYCLIC_BUCKET_NAME,
         Key: prods[i].prodImage,
         Expires: 3600,
       };
@@ -573,7 +573,7 @@ const getAllProducts = async (req, res, next) => {
       // const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
 
       const params = {
-        Bucket: process.env.BUCKET,
+        Bucket: process.env.CYCLIC_BUCKET_NAME,
         Key:  products[i].prodImage,
         Expires: 3600,
       };
