@@ -6,10 +6,6 @@ const { default: mongoose } = require("mongoose");
 const jwt = require("jsonwebtoken");
 const { v4: uuidv4 } = require("uuid");
 const bcrypt = require("bcryptjs");
-
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
-const { GetObjectCommand } = require("@aws-sdk/client-s3");
 const AWS = require('aws-sdk');
 const s3 =new AWS.S3();
 

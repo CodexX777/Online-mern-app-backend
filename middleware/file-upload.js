@@ -7,12 +7,7 @@ const MIME_TYPE = {
   "image/jpeg": "jpeg",
 };
 
-// const storage = multer.memoryStorage({
-//   filename: (req, file, cb) => {
-//     const ext = MIME_TYPE[file.mimetype];
-//     cb(null, uuidv4() + "." + ext);
-//   },
-// });
+
 
 const fileUpload = multer({
   limits: 5000000,
