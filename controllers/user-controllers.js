@@ -574,7 +574,7 @@ const getAllProducts = async (req, res, next) => {
 
       const params = {
         Bucket: process.env.BUCKET,
-        Key: userData.orders[i].prodImage,
+        Key:  products[i].prodImage,
         Expires: 3600,
       };
       const url = await s3.getSignedUrl("getObject", params);
