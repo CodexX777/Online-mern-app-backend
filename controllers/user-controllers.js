@@ -590,7 +590,7 @@ const getAllProducts = async (req, res, next) => {
     }
   } catch (err) {
     const error = new HttpError(
-      "Something went wrong, Could not fetch products.",
+      "Something went wrong in the Image url, Could not fetch products.",
       500
     );
     return next(error);
